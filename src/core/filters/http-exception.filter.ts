@@ -1,0 +1,224 @@
+import {
+    ExceptionFilter,
+    Catch,
+    ArgumentsHost,
+    HttpException,
+    HttpStatus,
+    Logger,
+} from '@nestjs/common';
+import { Request, Response } from 'express';
+import { ValidationError as ClassValidatorError } from 'class-validator';
+import {
+    ErrorResponse,
+    ValidationError,
+} from '../../common/types/api-response.type';
+
+/**
+ * Global exception filter that catches all HTTP exceptions and formats them
+ * according to the standard API response structure
+ */
+@Catch()
+export class HttpExceptionFilter implements ExceptionFilter {
+    private readonly logger = new Logger(HttpExceptionFilter.name);
+
+    catch(exception: unknown, host: ArgumentsHost): void {
+        const ctx = host.switchToHttp();
+        const response = ctx.getResponse<Response>();
+        const request = ctx.getRequest<Request>();
+
+        const { status, errorResponse } = this.getErrorResponse(
+            exception,
+            request,
+        );
+
+        // Log the error for monitoring
+        this.logError(exception, request, status);
+
+        response.status(status).json(errorResponse);
+    }
+
+    /**
+     * Determines the HTTP status code and formats the error response
+     */
+    private getErrorResponse(
+        exception: unknown,
+        request: Request,
+    ): {
+        status: number;
+        errorResponse: ErrorResponse;
+    } {
+        let status: number;
+        let message: string;
+        let errorCode: string;
+        let details: string | undefined;
+        let validationErrors: ValidationError[] | undefined;
+
+        if (exception instanceof HttpException) {
+            status = exception.getStatus();
+            const exceptionResponse = exception.getResponse();
+
+            if (typeof exceptionResponse === 'string') {
+                message = exceptionResponse;
+                errorCode = this.getErrorCodeFromStatus(status);
+            } else if (
+                typeof exceptionResponse === 'object' &&
+                exceptionResponse !== null
+            ) {
+                const responseObj = exceptionResponse as Record<
+                    string,
+                    unknown
+                >;
+                message = (responseObj.message as string) || exception.message;
+                errorCode =
+                    (responseObj.error as string) ||
+                    this.getErrorCodeFromStatus(status);
+                details = responseObj.details as string | undefined;
+
+                // Handle validation errors from class-validator
+                if (responseObj.message && Array.isArray(responseObj.message)) {
+                    validationErrors = this.formatValidationErrors(
+                        responseObj.message as ClassValidatorError[],
+                    );
+                    message = 'Validation failed';
+                }
+            } else {
+                message = exception.message;
+                errorCode = this.getErrorCodeFromStatus(status);
+            }
+        } else if (exception instanceof Error) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = 'Internal server error';
+            errorCode = 'INTERNAL_SERVER_ERROR';
+            details =
+                process.env.NODE_ENV === 'development'
+                    ? exception.message
+                    : undefined;
+        } else {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = 'An unexpected error occurred';
+            errorCode = 'INTERNAL_SERVER_ERROR';
+        }
+
+        const errorResponse: ErrorResponse = {
+            success: false,
+            statusCode: status,
+            message,
+            error: {
+                code: errorCode,
+                details,
+                validationErrors,
+                requestId: this.generateRequestId(),
+            },
+            timestamp: new Date().toISOString(),
+            path: request.url,
+        };
+
+        return { status, errorResponse };
+    }
+
+    /**
+     * Maps HTTP status codes to error codes
+     */
+    private getErrorCodeFromStatus(status: number): string {
+        const statusCodeMap: Record<number, string> = {
+            [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
+            [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
+            [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
+            [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+            [HttpStatus.METHOD_NOT_ALLOWED]: 'METHOD_NOT_ALLOWED',
+            [HttpStatus.CONFLICT]: 'CONFLICT',
+            [HttpStatus.UNPROCESSABLE_ENTITY]: 'UNPROCESSABLE_ENTITY',
+            [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
+            [HttpStatus.INTERNAL_SERVER_ERROR]: 'INTERNAL_SERVER_ERROR',
+            [HttpStatus.BAD_GATEWAY]: 'BAD_GATEWAY',
+            [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
+        };
+
+        return statusCodeMap[status] || 'UNKNOWN_ERROR';
+    }
+
+    /**
+     * Formats class-validator validation errors to our standard format
+     * Now properly typed without eslint-disable comments
+     */
+    private formatValidationErrors(
+        errors: ClassValidatorError[],
+    ): ValidationError[] {
+        const validationErrors: ValidationError[] = [];
+
+        const processError = (
+            error: ClassValidatorError,
+            parentPath = '',
+        ): void => {
+            const field = parentPath
+                ? `${parentPath}.${error.property}`
+                : error.property;
+
+            if (error.constraints) {
+                validationErrors.push({
+                    field,
+                    value: error.value as unknown,
+                    constraints: error.constraints,
+                });
+            }
+
+            if (error.children && error.children.length > 0) {
+                error.children.forEach((child: ClassValidatorError) =>
+                    processError(child, field),
+                );
+            }
+        };
+
+        errors.forEach((error) => processError(error));
+        return validationErrors;
+    }
+
+    /**
+     * Logs error details for monitoring and debugging
+     */
+    private logError(
+        exception: unknown,
+        request: Request,
+        status: number,
+    ): void {
+        const { method, url, ip, headers } = request;
+        const userAgent = headers['user-agent'] || 'Unknown';
+
+        const logContext = {
+            method,
+            url,
+            ip,
+            userAgent,
+            status,
+            timestamp: new Date().toISOString(),
+        };
+
+        if (status >= 500) {
+            // Server errors - log as errors
+            this.logger.error(
+                `${method} ${url} - ${status}`,
+                exception instanceof Error ? exception.stack : exception,
+                JSON.stringify(logContext),
+            );
+        } else if (status >= 400) {
+            // Client errors - log as warnings
+            this.logger.warn(
+                `${method} ${url} - ${status}`,
+                JSON.stringify({
+                    ...logContext,
+                    error:
+                        exception instanceof Error
+                            ? exception.message
+                            : exception,
+                }),
+            );
+        }
+    }
+
+    /**
+     * Generates a unique request ID for error tracking
+     */
+    private generateRequestId(): string {
+        return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    }
+}

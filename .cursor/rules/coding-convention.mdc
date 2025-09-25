@@ -6,14 +6,15 @@ alwaysApply: true
 - **Coding Convention:**
   - *Basic Principles:*
     - Use English for all code and documentation.
-    - Use strict TypeScript configuration
+    - Use strict TypeScript configuration.
     - Always declare the type of each variable and function (parameters and return value).
-    - Avoid using `any`, prefer `unknown` for unknown types
+    - Avoid using `any`, prefer `unknown` for unknown types.
     - Create necessary types.
-    - Leverage TypeScript's built-in utility types
-    - Use generics for reusable type patterns
+    - Leverage TypeScript's built-in utility types.
+    - Use generics for reusable type patterns.
     - Use JSDoc to document public classes and methods.
     - Don't leave blank lines within a function.
+    - Follow DRY principle, using utils function with repeat code.
     - One export per file.
   - *Naming Convention:*
     - Use descriptive and consistent naming conventions.  Prefix files based on their role (e.g., `user.controller.ts`, `auth.service.ts`, `create-user.dto.ts`).
