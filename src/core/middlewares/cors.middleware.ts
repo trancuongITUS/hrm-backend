@@ -1,5 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { ConfigService } from '../../config';
 import { HTTP_METHOD } from '../../common/constants';
 
 /**
@@ -8,6 +9,8 @@ import { HTTP_METHOD } from '../../common/constants';
  */
 @Injectable()
 export class CorsMiddleware implements NestMiddleware {
+    constructor(private readonly configService: ConfigService) {}
+
     use(req: Request, res: Response, next: NextFunction): void {
         const origin = req.headers.origin;
         const allowedOrigins = this.getAllowedOrigins();
@@ -49,32 +52,10 @@ export class CorsMiddleware implements NestMiddleware {
     }
 
     /**
-     * Gets allowed origins based on environment
+     * Gets allowed origins from configuration
      */
     private getAllowedOrigins(): string[] {
-        const env = process.env.NODE_ENV || 'development';
-
-        switch (env) {
-            case 'production':
-                return (process.env.ALLOWED_ORIGINS || '')
-                    .split(',')
-                    .filter(Boolean);
-            case 'staging':
-                return [
-                    'https://staging.yourdomain.com',
-                    'https://admin-staging.yourdomain.com',
-                ];
-            case 'development':
-            default:
-                return [
-                    'http://localhost:3000',
-                    'http://localhost:3001',
-                    'http://localhost:4200',
-                    'http://127.0.0.1:3000',
-                    'http://127.0.0.1:3001',
-                    'http://127.0.0.1:4200',
-                ];
-        }
+        return this.configService.security.allowedOrigins;
     }
 
     /**
@@ -87,7 +68,7 @@ export class CorsMiddleware implements NestMiddleware {
         if (!origin) return true; // Allow requests with no origin (mobile apps, etc.)
 
         // In development, allow all origins
-        if (process.env.NODE_ENV === 'development') {
+        if (this.configService.app.isDevelopment) {
             return true;
         }
 

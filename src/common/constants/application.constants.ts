@@ -1,21 +1,10 @@
 /**
- * Application configuration and environment constants
+ * Application constants that are not environment-dependent
+ * Note: Environment-dependent values are now managed by the ConfigService
  */
 
 // =============================================================================
-// DEFAULT VALUES
-// =============================================================================
-
-export const DEFAULT = {
-    PORT: 3000,
-    API_PREFIX: 'api/v1',
-    NODE_ENV: 'development',
-    LOG_LEVEL: 'log',
-    MAX_REQUEST_SIZE: '10mb',
-} as const;
-
-// =============================================================================
-// ENVIRONMENT VALUES
+// ENVIRONMENT VALUES (for type checking and comparisons)
 // =============================================================================
 
 export const ENVIRONMENT = {

@@ -13,6 +13,7 @@ import {
     SAFE_HTTP_METHODS,
     NETWORK_ERROR,
     TIMEOUT_ERROR,
+    RETRY,
 } from '../../common/constants';
 
 /**
@@ -27,9 +28,9 @@ export class RetryInterceptor implements NestInterceptor {
     private readonly maxDelay: number;
 
     constructor(
-        maxRetries: number = 3,
-        baseDelay: number = 1000,
-        maxDelay: number = 10000,
+        maxRetries: number = RETRY.DEFAULT_MAX_RETRIES,
+        baseDelay: number = RETRY.BASE_DELAY,
+        maxDelay: number = RETRY.MAX_DELAY,
     ) {
         this.maxRetries = maxRetries;
         this.baseDelay = baseDelay;
@@ -139,7 +140,7 @@ export class RetryInterceptor implements NestInterceptor {
      */
     private calculateDelay(attempt: number): number {
         const exponentialDelay = this.baseDelay * Math.pow(2, attempt - 1);
-        const jitter = Math.random() * 0.1 * exponentialDelay; // 10% jitter
+        const jitter = Math.random() * RETRY.JITTER_PERCENT * exponentialDelay;
         const totalDelay = exponentialDelay + jitter;
 
         return Math.min(totalDelay, this.maxDelay);

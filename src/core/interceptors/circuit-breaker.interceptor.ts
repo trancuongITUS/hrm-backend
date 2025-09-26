@@ -9,7 +9,7 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import {
-    TIMEOUT,
+    CIRCUIT_BREAKER,
     HTTP_STATUS,
     ERROR_CODE,
     NETWORK_ERROR,
@@ -58,10 +58,10 @@ export class CircuitBreakerInterceptor implements NestInterceptor {
 
     constructor(config?: Partial<CircuitBreakerConfig>) {
         this.config = {
-            failureThreshold: TIMEOUT.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-            recoveryTimeout: TIMEOUT.CIRCUIT_BREAKER_RECOVERY,
-            monitoringPeriod: TIMEOUT.CIRCUIT_BREAKER_MONITORING,
-            halfOpenMaxCalls: TIMEOUT.CIRCUIT_BREAKER_MAX_CALLS,
+            failureThreshold: CIRCUIT_BREAKER.FAILURE_THRESHOLD,
+            recoveryTimeout: CIRCUIT_BREAKER.RECOVERY_TIME,
+            monitoringPeriod: CIRCUIT_BREAKER.MONITORING_WINDOW,
+            halfOpenMaxCalls: CIRCUIT_BREAKER.MAX_CALLS,
             ...config,
         };
     }

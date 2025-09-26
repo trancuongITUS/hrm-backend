@@ -3,47 +3,24 @@
  */
 
 // =============================================================================
-// RATE LIMITING
+// CIRCUIT BREAKER & RETRY CONFIGURATION
+// Note: Basic timeouts and rate limits are now managed by ConfigService
 // =============================================================================
 
-export const RATE_LIMIT = {
-    // Time windows (in milliseconds)
-    SHORT_TTL: 60000, // 1 minute
-    MEDIUM_TTL: 300000, // 5 minutes
-    LONG_TTL: 900000, // 15 minutes
-
-    // Request limits per time window
-    SHORT_LIMIT: 10, // 10 requests per minute
-    MEDIUM_LIMIT: 50, // 50 requests per 5 minutes
-    LONG_LIMIT: 100, // 100 requests per 15 minutes
-
-    // Rate limit names
-    NAMES: {
-        SHORT: 'short',
-        MEDIUM: 'medium',
-        LONG: 'long',
-    },
+export const CIRCUIT_BREAKER = {
+    // Circuit breaker timeouts
+    RECOVERY_TIME: 60000, // 1 minute
+    MONITORING_WINDOW: 300000, // 5 minutes
+    MAX_CALLS: 3,
+    FAILURE_THRESHOLD: 5,
 } as const;
 
-// =============================================================================
-// TIMEOUTS & DELAYS
-// =============================================================================
-
-export const TIMEOUT = {
-    // Default timeouts (in milliseconds)
-    DEFAULT_REQUEST_TIMEOUT: 30000, // 30 seconds
-
-    // Circuit breaker timeouts
-    CIRCUIT_BREAKER_RECOVERY: 60000, // 1 minute
-    CIRCUIT_BREAKER_MONITORING: 300000, // 5 minutes
-    CIRCUIT_BREAKER_MAX_CALLS: 3,
-    CIRCUIT_BREAKER_FAILURE_THRESHOLD: 5,
-
+export const RETRY = {
     // Retry configuration
     DEFAULT_MAX_RETRIES: 3,
-    BASE_RETRY_DELAY: 1000, // 1 second
-    MAX_RETRY_DELAY: 10000, // 10 seconds
-    RETRY_JITTER_PERCENT: 0.1, // 10% jitter
+    BASE_DELAY: 1000, // 1 second
+    MAX_DELAY: 10000, // 10 seconds
+    JITTER_PERCENT: 0.1, // 10% jitter
 } as const;
 
 // =============================================================================

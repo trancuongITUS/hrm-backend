@@ -21,7 +21,7 @@ export const PERFORMANCE = {
 
     // Cache management
     CACHE_CLEANUP_THRESHOLD: 1000, // Clean cache when > 1000 entries
-    DEFAULT_CACHE_TTL: 300000, // 5 minutes in milliseconds
+    // Note: DEFAULT_CACHE_TTL is now managed by ConfigService
 } as const;
 
 // =============================================================================

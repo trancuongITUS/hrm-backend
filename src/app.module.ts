@@ -17,37 +17,45 @@ import {
     MetricsInterceptor,
     ValidationInterceptor,
 } from './core/interceptors';
+import { ConfigModule, ConfigService } from './config';
 import { TIMEOUT_MS } from './common/constants';
-import { RATE_LIMIT, TIMEOUT } from './common/constants';
 
 @Module({
     imports: [
-        // Rate limiting configuration
-        ThrottlerModule.forRoot([
-            {
-                name: RATE_LIMIT.NAMES.SHORT,
-                ttl: RATE_LIMIT.SHORT_TTL,
-                limit: RATE_LIMIT.SHORT_LIMIT,
-            },
-            {
-                name: RATE_LIMIT.NAMES.MEDIUM,
-                ttl: RATE_LIMIT.MEDIUM_TTL,
-                limit: RATE_LIMIT.MEDIUM_LIMIT,
-            },
-            {
-                name: RATE_LIMIT.NAMES.LONG,
-                ttl: RATE_LIMIT.LONG_TTL,
-                limit: RATE_LIMIT.LONG_LIMIT,
-            },
-        ]),
+        // Configuration module (global)
+        ConfigModule,
+
+        // Rate limiting configuration using ConfigService
+        ThrottlerModule.forRootAsync({
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => [
+                {
+                    name: configService.rateLimit.short.name,
+                    ttl: configService.rateLimit.short.ttl,
+                    limit: configService.rateLimit.short.limit,
+                },
+                {
+                    name: configService.rateLimit.medium.name,
+                    ttl: configService.rateLimit.medium.ttl,
+                    limit: configService.rateLimit.medium.limit,
+                },
+                {
+                    name: configService.rateLimit.long.name,
+                    ttl: configService.rateLimit.long.ttl,
+                    limit: configService.rateLimit.long.limit,
+                },
+            ],
+        }),
     ],
     controllers: [AppController],
     providers: [
         AppService,
-        // Timeout configuration
+        // Timeout configuration using ConfigService
         {
             provide: TIMEOUT_MS,
-            useValue: TIMEOUT.DEFAULT_REQUEST_TIMEOUT,
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) =>
+                configService.performance.requestTimeout,
         },
         // Global pipes
         {

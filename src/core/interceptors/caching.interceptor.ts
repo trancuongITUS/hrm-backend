@@ -9,6 +9,7 @@ import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request } from 'express';
 import { PERFORMANCE, HTTP_METHOD, VALIDATION } from '../../common/constants';
+import { ConfigService } from '../../config';
 
 interface CacheEntry {
     data: unknown;
@@ -23,7 +24,11 @@ interface CacheEntry {
 export class CachingInterceptor implements NestInterceptor {
     private readonly logger = new Logger(CachingInterceptor.name);
     private readonly cache = new Map<string, CacheEntry>();
-    private readonly defaultTtl = PERFORMANCE.DEFAULT_CACHE_TTL;
+    private readonly defaultTtl: number;
+
+    constructor(private readonly configService: ConfigService) {
+        this.defaultTtl = this.configService.performance.cacheTtl;
+    }
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         const request = context.switchToHttp().getRequest<Request>();

@@ -3,13 +3,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { AppLogger } from './common/utils/logger.util';
-import {
-    DEFAULT,
-    ENVIRONMENT,
-    HTTP_STATUS,
-    ERROR_CODE,
-    REGEX_PATTERN,
-} from './common/constants';
+import { ConfigService } from './config';
+import { HTTP_STATUS, ERROR_CODE, REGEX_PATTERN } from './common/constants';
 
 async function bootstrap(): Promise<void> {
     // Create NestJS application with custom logger
@@ -17,8 +12,11 @@ async function bootstrap(): Promise<void> {
         logger: new AppLogger(),
     });
 
+    // Get configuration service
+    const configService = app.get(ConfigService);
+
     // Global prefix for all routes
-    app.setGlobalPrefix(DEFAULT.API_PREFIX);
+    app.setGlobalPrefix(configService.app.apiPrefix);
 
     // Additional validation pipe (custom pipe is already registered in AppModule)
     app.useGlobalPipes(
@@ -26,8 +24,7 @@ async function bootstrap(): Promise<void> {
             whitelist: true, // Strip non-whitelisted properties
             forbidNonWhitelisted: true, // Throw error for non-whitelisted properties
             transform: true, // Transform types automatically
-            disableErrorMessages:
-                process.env.NODE_ENV === ENVIRONMENT.PRODUCTION, // Hide detailed validation errors in production
+            disableErrorMessages: configService.app.isProduction, // Hide detailed validation errors in production
         }),
     );
 
@@ -41,8 +38,7 @@ async function bootstrap(): Promise<void> {
     // Security headers (handled by SecurityMiddleware in AppModule)
     // Request size limiting
     app.use((req: Request, res: Response, next: NextFunction) => {
-        const maxSize =
-            process.env.MAX_REQUEST_SIZE || DEFAULT.MAX_REQUEST_SIZE;
+        const maxSize = configService.security.maxRequestSize;
         const contentLength = req.headers['content-length'];
         if (
             contentLength &&
@@ -65,13 +61,15 @@ async function bootstrap(): Promise<void> {
     });
 
     // Start the application
-    const port = process.env.PORT ?? DEFAULT.PORT;
+    const port = configService.app.port;
     await app.listen(port);
 
     // Log application startup
     const logger = new AppLogger('Bootstrap');
-    logger.log(`🚀 Application is running on: http://localhost:${port}/api/v1`);
-    logger.log(`📝 Environment: ${process.env.NODE_ENV || DEFAULT.NODE_ENV}`);
+    logger.log(
+        `🚀 Application is running on: http://localhost:${port}/${configService.app.apiPrefix}`,
+    );
+    logger.log(`📝 Environment: ${configService.app.environment}`);
     logger.log(`🛡️  Security middlewares enabled`);
     logger.log(`📊 Logging and monitoring active`);
     logger.log(`✅ All middlewares configured successfully`);
