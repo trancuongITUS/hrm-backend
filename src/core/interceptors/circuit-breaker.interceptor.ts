@@ -8,6 +8,13 @@ import {
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import {
+    TIMEOUT,
+    HTTP_STATUS,
+    ERROR_CODE,
+    NETWORK_ERROR,
+    TIMEOUT_ERROR,
+} from '../../common/constants';
 
 enum CircuitState {
     CLOSED = 'CLOSED',
@@ -51,10 +58,10 @@ export class CircuitBreakerInterceptor implements NestInterceptor {
 
     constructor(config?: Partial<CircuitBreakerConfig>) {
         this.config = {
-            failureThreshold: 5, // Number of failures to trigger circuit opening
-            recoveryTimeout: 60000, // Time to wait before attempting recovery (1 minute)
-            monitoringPeriod: 300000, // Period to monitor failures (5 minutes)
-            halfOpenMaxCalls: 3, // Maximum calls allowed in half-open state
+            failureThreshold: TIMEOUT.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+            recoveryTimeout: TIMEOUT.CIRCUIT_BREAKER_RECOVERY,
+            monitoringPeriod: TIMEOUT.CIRCUIT_BREAKER_MONITORING,
+            halfOpenMaxCalls: TIMEOUT.CIRCUIT_BREAKER_MAX_CALLS,
             ...config,
         };
     }
@@ -73,7 +80,7 @@ export class CircuitBreakerInterceptor implements NestInterceptor {
             throw new ServiceUnavailableException({
                 message:
                     'Service temporarily unavailable due to circuit breaker',
-                error: 'CIRCUIT_BREAKER_OPEN',
+                error: ERROR_CODE.CIRCUIT_BREAKER_OPEN,
                 state: this.state,
                 retryAfter: this.getRetryAfter(),
             });
@@ -190,17 +197,21 @@ export class CircuitBreakerInterceptor implements NestInterceptor {
         const err = error as { status?: number; name?: string; code?: string };
 
         // Don't trigger circuit breaker for client errors (4xx)
-        if (err.status && err.status >= 400 && err.status < 500) {
+        if (
+            err.status &&
+            err.status >= HTTP_STATUS.BAD_REQUEST &&
+            err.status < HTTP_STATUS.INTERNAL_SERVER_ERROR
+        ) {
             return false;
         }
 
         // Trigger for server errors, timeouts, and network errors
         return (
-            (err.status && err.status >= 500) ||
-            err.name === 'TimeoutError' ||
-            err.code === 'ECONNRESET' ||
-            err.code === 'ENOTFOUND' ||
-            err.code === 'ECONNREFUSED'
+            (err.status && err.status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) ||
+            err.name === TIMEOUT_ERROR.TIMEOUT_ERROR ||
+            err.code === NETWORK_ERROR.ECONNRESET ||
+            err.code === NETWORK_ERROR.ENOTFOUND ||
+            err.code === NETWORK_ERROR.ECONNREFUSED
         );
     }
 

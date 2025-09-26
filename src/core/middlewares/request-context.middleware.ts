@@ -1,5 +1,9 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import {
+    SECURITY_HEADERS,
+    SECURITY_HEADER_VALUES,
+} from '../../common/constants';
 
 /**
  * Type-safe request context middleware
@@ -28,9 +32,18 @@ export class RequestContextMiddleware implements NestMiddleware {
         );
 
         // Add security headers
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('X-Frame-Options', 'DENY');
-        res.setHeader('X-XSS-Protection', '1; mode=block');
+        res.setHeader(
+            SECURITY_HEADERS.X_CONTENT_TYPE_OPTIONS,
+            SECURITY_HEADER_VALUES.NOSNIFF,
+        );
+        res.setHeader(
+            SECURITY_HEADERS.X_FRAME_OPTIONS,
+            SECURITY_HEADER_VALUES.DENY,
+        );
+        res.setHeader(
+            SECURITY_HEADERS.X_XSS_PROTECTION,
+            SECURITY_HEADER_VALUES.XSS_BLOCK,
+        );
 
         next();
     }

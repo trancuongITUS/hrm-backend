@@ -9,6 +9,11 @@ import {
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { catchError, delay, retryWhen, scan, take } from 'rxjs/operators';
+import {
+    SAFE_HTTP_METHODS,
+    NETWORK_ERROR,
+    TIMEOUT_ERROR,
+} from '../../common/constants';
 
 /**
  * Retry interceptor that handles transient failures with exponential backoff
@@ -83,8 +88,7 @@ export class RetryInterceptor implements NestInterceptor {
      * Checks if the HTTP method is safe to retry
      */
     private isSafeMethod(method: string): boolean {
-        const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
-        return safeMethods.includes(method.toUpperCase());
+        return SAFE_HTTP_METHODS.includes(method.toUpperCase() as any);
     }
 
     /**
@@ -99,7 +103,10 @@ export class RetryInterceptor implements NestInterceptor {
         const err = error as { code?: string; name?: string; message?: string };
 
         // Retry on network errors
-        if (err.code === 'ECONNRESET' || err.code === 'ENOTFOUND') {
+        if (
+            err.code === NETWORK_ERROR.ECONNRESET ||
+            err.code === NETWORK_ERROR.ENOTFOUND
+        ) {
             return true;
         }
 
@@ -117,7 +124,10 @@ export class RetryInterceptor implements NestInterceptor {
         }
 
         // Retry on timeout errors
-        if (err.name === 'TimeoutError' || err.message?.includes('timeout')) {
+        if (
+            err.name === TIMEOUT_ERROR.TIMEOUT_ERROR ||
+            err.message?.includes('timeout')
+        ) {
             return true;
         }
 

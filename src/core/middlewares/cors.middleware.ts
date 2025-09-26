@@ -1,5 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { HTTP_METHOD } from '../../common/constants';
 
 /**
  * CORS middleware that handles Cross-Origin Resource Sharing
@@ -39,7 +40,7 @@ export class CorsMiddleware implements NestMiddleware {
         res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
 
         // Handle preflight requests
-        if (req.method === 'OPTIONS') {
+        if (req.method === HTTP_METHOD.OPTIONS) {
             res.status(204).send();
             return;
         }

@@ -12,6 +12,7 @@ import {
     ErrorResponse,
     ValidationError,
 } from '../../common/types/api-response.type';
+import { HTTP_STATUS, ENVIRONMENT, ERROR_CODE } from '../../common/constants';
 
 /**
  * Global exception filter that catches all HTTP exceptions and formats them
@@ -88,15 +89,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
         } else if (exception instanceof Error) {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
             message = 'Internal server error';
-            errorCode = 'INTERNAL_SERVER_ERROR';
+            errorCode = ERROR_CODE.INTERNAL_SERVER_ERROR;
             details =
-                process.env.NODE_ENV === 'development'
+                process.env.NODE_ENV === ENVIRONMENT.DEVELOPMENT
                     ? exception.message
                     : undefined;
         } else {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
             message = 'An unexpected error occurred';
-            errorCode = 'INTERNAL_SERVER_ERROR';
+            errorCode = ERROR_CODE.INTERNAL_SERVER_ERROR;
         }
 
         const errorResponse: ErrorResponse = {
@@ -121,20 +122,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
      */
     private getErrorCodeFromStatus(status: number): string {
         const statusCodeMap: Record<number, string> = {
-            [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
-            [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
-            [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
-            [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
-            [HttpStatus.METHOD_NOT_ALLOWED]: 'METHOD_NOT_ALLOWED',
-            [HttpStatus.CONFLICT]: 'CONFLICT',
-            [HttpStatus.UNPROCESSABLE_ENTITY]: 'UNPROCESSABLE_ENTITY',
-            [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
-            [HttpStatus.INTERNAL_SERVER_ERROR]: 'INTERNAL_SERVER_ERROR',
-            [HttpStatus.BAD_GATEWAY]: 'BAD_GATEWAY',
-            [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
+            [HttpStatus.BAD_REQUEST]: ERROR_CODE.BAD_REQUEST,
+            [HttpStatus.UNAUTHORIZED]: ERROR_CODE.UNAUTHORIZED,
+            [HttpStatus.FORBIDDEN]: ERROR_CODE.FORBIDDEN,
+            [HttpStatus.NOT_FOUND]: ERROR_CODE.NOT_FOUND,
+            [HttpStatus.METHOD_NOT_ALLOWED]: ERROR_CODE.METHOD_NOT_ALLOWED,
+            [HttpStatus.CONFLICT]: ERROR_CODE.CONFLICT,
+            [HttpStatus.UNPROCESSABLE_ENTITY]: ERROR_CODE.UNPROCESSABLE_ENTITY,
+            [HttpStatus.TOO_MANY_REQUESTS]: ERROR_CODE.TOO_MANY_REQUESTS,
+            [HttpStatus.INTERNAL_SERVER_ERROR]:
+                ERROR_CODE.INTERNAL_SERVER_ERROR,
+            [HttpStatus.BAD_GATEWAY]: ERROR_CODE.BAD_GATEWAY,
+            [HttpStatus.SERVICE_UNAVAILABLE]: ERROR_CODE.SERVICE_UNAVAILABLE,
         };
 
-        return statusCodeMap[status] || 'UNKNOWN_ERROR';
+        return statusCodeMap[status] || ERROR_CODE.UNKNOWN_ERROR;
     }
 
     /**
@@ -193,14 +195,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
             timestamp: new Date().toISOString(),
         };
 
-        if (status >= 500) {
+        if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) {
             // Server errors - log as errors
             this.logger.error(
                 `${method} ${url} - ${status}`,
                 exception instanceof Error ? exception.stack : exception,
                 JSON.stringify(logContext),
             );
-        } else if (status >= 400) {
+        } else if (status >= HTTP_STATUS.BAD_REQUEST) {
             // Client errors - log as warnings
             this.logger.warn(
                 `${method} ${url} - ${status}`,

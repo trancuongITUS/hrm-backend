@@ -8,6 +8,7 @@ import {
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request } from 'express';
+import { PERFORMANCE, HTTP_METHOD, VALIDATION } from '../../common/constants';
 
 interface CacheEntry {
     data: unknown;
@@ -22,14 +23,14 @@ interface CacheEntry {
 export class CachingInterceptor implements NestInterceptor {
     private readonly logger = new Logger(CachingInterceptor.name);
     private readonly cache = new Map<string, CacheEntry>();
-    private readonly defaultTtl = 300000; // 5 minutes in milliseconds
+    private readonly defaultTtl = PERFORMANCE.DEFAULT_CACHE_TTL;
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         const request = context.switchToHttp().getRequest<Request>();
         const { method, url } = request;
 
         // Only cache GET requests
-        if (method !== 'GET') {
+        if (method !== HTTP_METHOD.GET) {
             return next.handle();
         }
 
@@ -110,7 +111,7 @@ export class CachingInterceptor implements NestInterceptor {
         this.cache.set(cacheKey, { data, expiry });
 
         // Clean up expired entries periodically
-        if (this.cache.size > 1000) {
+        if (this.cache.size > PERFORMANCE.CACHE_CLEANUP_THRESHOLD) {
             this.cleanupExpiredEntries();
         }
     }
@@ -126,7 +127,7 @@ export class CachingInterceptor implements NestInterceptor {
 
         const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
         if (maxAgeMatch) {
-            return parseInt(maxAgeMatch[1], 10) * 1000; // Convert seconds to milliseconds
+            return parseInt(maxAgeMatch[1], VALIDATION.DECIMAL_RADIX) * 1000; // Convert seconds to milliseconds
         }
 
         return null;

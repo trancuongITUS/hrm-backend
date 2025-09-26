@@ -17,26 +17,27 @@ import {
     MetricsInterceptor,
     ValidationInterceptor,
 } from './core/interceptors';
-import { TIMEOUT_MS } from './core/interceptors/timeout.interceptor';
+import { TIMEOUT_MS } from './common/constants';
+import { RATE_LIMIT, TIMEOUT } from './common/constants';
 
 @Module({
     imports: [
         // Rate limiting configuration
         ThrottlerModule.forRoot([
             {
-                name: 'short',
-                ttl: 60000, // 1 minute
-                limit: 10, // 10 requests per minute
+                name: RATE_LIMIT.NAMES.SHORT,
+                ttl: RATE_LIMIT.SHORT_TTL,
+                limit: RATE_LIMIT.SHORT_LIMIT,
             },
             {
-                name: 'medium',
-                ttl: 300000, // 5 minutes
-                limit: 50, // 50 requests per 5 minutes
+                name: RATE_LIMIT.NAMES.MEDIUM,
+                ttl: RATE_LIMIT.MEDIUM_TTL,
+                limit: RATE_LIMIT.MEDIUM_LIMIT,
             },
             {
-                name: 'long',
-                ttl: 900000, // 15 minutes
-                limit: 100, // 100 requests per 15 minutes
+                name: RATE_LIMIT.NAMES.LONG,
+                ttl: RATE_LIMIT.LONG_TTL,
+                limit: RATE_LIMIT.LONG_LIMIT,
             },
         ]),
     ],
@@ -46,7 +47,7 @@ import { TIMEOUT_MS } from './core/interceptors/timeout.interceptor';
         // Timeout configuration
         {
             provide: TIMEOUT_MS,
-            useValue: 30000, // 30 seconds
+            useValue: TIMEOUT.DEFAULT_REQUEST_TIMEOUT,
         },
         // Global pipes
         {

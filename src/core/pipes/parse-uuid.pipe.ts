@@ -4,6 +4,7 @@ import {
     ArgumentMetadata,
     BadRequestException,
 } from '@nestjs/common';
+import { ERROR_CODE } from '../../common/constants';
 
 /**
  * UUID version types
@@ -48,7 +49,7 @@ export class ParseUuidPipe implements PipeTransform<string, string> {
         if (value === undefined || value === null) {
             throw new BadRequestException({
                 message: `${metadata.data || 'UUID'} is required`,
-                error: 'MISSING_UUID',
+                error: ERROR_CODE.MISSING_UUID,
                 details: 'UUID value is required but was not provided.',
             });
         }
@@ -58,7 +59,7 @@ export class ParseUuidPipe implements PipeTransform<string, string> {
         if (stringValue === '') {
             throw new BadRequestException({
                 message: `${metadata.data || 'UUID'} cannot be empty`,
-                error: 'EMPTY_UUID',
+                error: ERROR_CODE.EMPTY_UUID,
                 details: 'UUID value cannot be an empty string.',
             });
         }
@@ -75,7 +76,7 @@ export class ParseUuidPipe implements PipeTransform<string, string> {
                 message:
                     this.options.errorMessage ||
                     `${metadata.data || 'Value'} must be a ${versionMessage}`,
-                error: 'INVALID_UUID',
+                error: ERROR_CODE.INVALID_UUID,
                 details: `Provided value "${value}" is not a valid ${versionMessage}.`,
             });
         }

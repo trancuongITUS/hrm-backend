@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { validate, ValidationError } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
+import { ERROR_CODE } from '../../common/constants';
 
 /**
  * Properly typed validation error response
@@ -45,7 +46,7 @@ export class ValidationPipe implements PipeTransform<unknown, unknown> {
         if (errors.length > 0) {
             throw new BadRequestException({
                 message: this.formatErrors(errors),
-                error: 'VALIDATION_FAILED',
+                error: ERROR_CODE.VALIDATION_FAILED,
                 details:
                     'Request validation failed. Please check your input data.',
             });

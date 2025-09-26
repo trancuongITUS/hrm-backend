@@ -3,6 +3,13 @@ import { ValidationPipe } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { AppLogger } from './common/utils/logger.util';
+import {
+    DEFAULT,
+    ENVIRONMENT,
+    HTTP_STATUS,
+    ERROR_CODE,
+    REGEX_PATTERN,
+} from './common/constants';
 
 async function bootstrap(): Promise<void> {
     // Create NestJS application with custom logger
@@ -11,7 +18,7 @@ async function bootstrap(): Promise<void> {
     });
 
     // Global prefix for all routes
-    app.setGlobalPrefix('api/v1');
+    app.setGlobalPrefix(DEFAULT.API_PREFIX);
 
     // Additional validation pipe (custom pipe is already registered in AppModule)
     app.useGlobalPipes(
@@ -19,7 +26,8 @@ async function bootstrap(): Promise<void> {
             whitelist: true, // Strip non-whitelisted properties
             forbidNonWhitelisted: true, // Throw error for non-whitelisted properties
             transform: true, // Transform types automatically
-            disableErrorMessages: process.env.NODE_ENV === 'production', // Hide detailed validation errors in production
+            disableErrorMessages:
+                process.env.NODE_ENV === ENVIRONMENT.PRODUCTION, // Hide detailed validation errors in production
         }),
     );
 
@@ -33,18 +41,20 @@ async function bootstrap(): Promise<void> {
     // Security headers (handled by SecurityMiddleware in AppModule)
     // Request size limiting
     app.use((req: Request, res: Response, next: NextFunction) => {
-        const maxSize = process.env.MAX_REQUEST_SIZE || '10mb';
+        const maxSize =
+            process.env.MAX_REQUEST_SIZE || DEFAULT.MAX_REQUEST_SIZE;
         const contentLength = req.headers['content-length'];
         if (
             contentLength &&
-            parseInt(contentLength) > parseInt(maxSize.replace(/\D/g, ''))
+            parseInt(contentLength) >
+                parseInt(maxSize.replace(REGEX_PATTERN.NUMERIC_ONLY, ''))
         ) {
-            return res.status(413).json({
+            return res.status(HTTP_STATUS.PAYLOAD_TOO_LARGE).json({
                 success: false,
-                statusCode: 413,
+                statusCode: HTTP_STATUS.PAYLOAD_TOO_LARGE,
                 message: 'Request entity too large',
                 error: {
-                    code: 'PAYLOAD_TOO_LARGE',
+                    code: ERROR_CODE.PAYLOAD_TOO_LARGE,
                     details: `Request size exceeds the maximum allowed size of ${maxSize}`,
                 },
                 timestamp: new Date().toISOString(),
@@ -55,13 +65,13 @@ async function bootstrap(): Promise<void> {
     });
 
     // Start the application
-    const port = process.env.PORT ?? 3000;
+    const port = process.env.PORT ?? DEFAULT.PORT;
     await app.listen(port);
 
     // Log application startup
     const logger = new AppLogger('Bootstrap');
     logger.log(`🚀 Application is running on: http://localhost:${port}/api/v1`);
-    logger.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.log(`📝 Environment: ${process.env.NODE_ENV || DEFAULT.NODE_ENV}`);
     logger.log(`🛡️  Security middlewares enabled`);
     logger.log(`📊 Logging and monitoring active`);
     logger.log(`✅ All middlewares configured successfully`);

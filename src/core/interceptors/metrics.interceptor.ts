@@ -8,6 +8,12 @@ import {
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { Request, Response } from 'express';
+import {
+    HTTP_STATUS,
+    PERFORMANCE,
+    HEALTH_STATUS,
+    VALIDATION,
+} from '../../common/constants';
 
 interface RequestMetrics {
     count: number;
@@ -63,7 +69,9 @@ export class MetricsInterceptor implements NestInterceptor {
             }),
             catchError((error) => {
                 const duration = Date.now() - startTime;
-                const statusCode = (error as { status?: number }).status || 500;
+                const statusCode =
+                    (error as { status?: number }).status ||
+                    HTTP_STATUS.INTERNAL_SERVER_ERROR;
                 this.recordMetrics(endpoint, duration, statusCode, true);
                 throw error;
             }),
@@ -100,15 +108,14 @@ export class MetricsInterceptor implements NestInterceptor {
         this.updateMetrics(this.globalMetrics, duration, statusCode, isError);
 
         // Log slow requests
-        if (duration > 5000) {
-            // 5 seconds
+        if (duration > PERFORMANCE.SLOW_REQUEST_THRESHOLD) {
             this.logger.warn(
                 `Slow request detected: ${endpoint} took ${duration}ms`,
             );
         }
 
         // Log metrics periodically
-        if (this.globalMetrics.count % 100 === 0) {
+        if (this.globalMetrics.count % PERFORMANCE.METRICS_LOG_INTERVAL === 0) {
             this.logPerformanceMetrics();
         }
     }
@@ -177,10 +184,10 @@ export class MetricsInterceptor implements NestInterceptor {
     ): Record<number, number> {
         return Object.entries(statusCodes)
             .sort(([, a], [, b]) => b - a)
-            .slice(0, 5)
+            .slice(0, PERFORMANCE.TOP_STATUS_CODES_LIMIT)
             .reduce(
                 (acc, [code, count]) => {
-                    acc[parseInt(code, 10)] = count;
+                    acc[parseInt(code, VALIDATION.DECIMAL_RADIX)] = count;
                     return acc;
                 },
                 {} as Record<number, number>,
@@ -237,12 +244,19 @@ export class MetricsInterceptor implements NestInterceptor {
             (this.globalMetrics.errorCount / this.globalMetrics.count) * 100;
         const avgResponseTime = this.globalMetrics.averageDuration;
 
-        let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+        let status: 'healthy' | 'degraded' | 'unhealthy' =
+            HEALTH_STATUS.HEALTHY;
 
-        if (errorRate > 10 || avgResponseTime > 5000) {
-            status = 'unhealthy';
-        } else if (errorRate > 5 || avgResponseTime > 2000) {
-            status = 'degraded';
+        if (
+            errorRate > PERFORMANCE.UNHEALTHY_ERROR_RATE ||
+            avgResponseTime > PERFORMANCE.SLOW_REQUEST_THRESHOLD
+        ) {
+            status = HEALTH_STATUS.UNHEALTHY;
+        } else if (
+            errorRate > PERFORMANCE.DEGRADED_ERROR_RATE ||
+            avgResponseTime > PERFORMANCE.DEGRADED_RESPONSE_TIME
+        ) {
+            status = HEALTH_STATUS.DEGRADED;
         }
 
         return {

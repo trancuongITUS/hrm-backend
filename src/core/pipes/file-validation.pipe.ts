@@ -1,4 +1,5 @@
 import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
+import { ERROR_CODE } from '../../common/constants';
 
 /**
  * File validation configuration
@@ -61,7 +62,7 @@ export class FileValidationPipe implements PipeTransform<unknown, unknown> {
             if (value.length > this.options.maxFiles) {
                 throw new BadRequestException({
                     message: `Too many files. Maximum allowed: ${this.options.maxFiles}`,
-                    error: 'TOO_MANY_FILES',
+                    error: ERROR_CODE.TOO_MANY_FILES,
                     details: `Received ${value.length} files, but maximum is ${this.options.maxFiles}.`,
                 });
             }
@@ -70,7 +71,7 @@ export class FileValidationPipe implements PipeTransform<unknown, unknown> {
                 if (!this.isFileObject(file)) {
                     throw new BadRequestException({
                         message: `Invalid file at index ${index}`,
-                        error: 'INVALID_FILE_OBJECT',
+                        error: ERROR_CODE.INVALID_FILE_OBJECT,
                         details: 'File object is missing required properties.',
                     });
                 }
@@ -92,7 +93,7 @@ export class FileValidationPipe implements PipeTransform<unknown, unknown> {
 
             throw new BadRequestException({
                 message: `File '${file.originalname}' is too large. Maximum size: ${maxSizeMB}MB`,
-                error: 'FILE_TOO_LARGE',
+                error: ERROR_CODE.FILE_TOO_LARGE,
                 details: `File size is ${fileSizeMB}MB, but maximum allowed is ${maxSizeMB}MB.`,
             });
         }
@@ -102,7 +103,7 @@ export class FileValidationPipe implements PipeTransform<unknown, unknown> {
             if (!this.options.allowedMimeTypes.includes(file.mimetype)) {
                 throw new BadRequestException({
                     message: `File '${file.originalname}' has invalid type. Allowed types: ${this.options.allowedMimeTypes.join(', ')}`,
-                    error: 'INVALID_FILE_TYPE',
+                    error: ERROR_CODE.INVALID_FILE_TYPE,
                     details: `File MIME type '${file.mimetype}' is not allowed.`,
                 });
             }
@@ -114,7 +115,7 @@ export class FileValidationPipe implements PipeTransform<unknown, unknown> {
         if (this.options.requireExtension && !extension) {
             throw new BadRequestException({
                 message: `File '${file.originalname}' must have a file extension`,
-                error: 'MISSING_FILE_EXTENSION',
+                error: ERROR_CODE.MISSING_FILE_EXTENSION,
                 details: 'File extension is required but not found.',
             });
         }
@@ -128,7 +129,7 @@ export class FileValidationPipe implements PipeTransform<unknown, unknown> {
             if (!allowedExtensions.includes(normalizedExtension)) {
                 throw new BadRequestException({
                     message: `File '${file.originalname}' has invalid extension. Allowed extensions: ${this.options.allowedExtensions.join(', ')}`,
-                    error: 'INVALID_FILE_EXTENSION',
+                    error: ERROR_CODE.INVALID_FILE_EXTENSION,
                     details: `File extension '${extension}' is not allowed.`,
                 });
             }

@@ -1,4 +1,5 @@
 import { ConsoleLogger } from '@nestjs/common';
+import { LOG_CONTEXT } from '../constants';
 
 /**
  * Enhanced logger utility with structured logging capabilities
@@ -47,7 +48,7 @@ export class AppLogger extends ConsoleLogger {
         this.logWithContext(
             'log',
             `${method} ${url} - ${statusCode} [${duration}ms]`,
-            'HTTP',
+            LOG_CONTEXT.HTTP,
             {
                 method,
                 url,

@@ -4,6 +4,7 @@ import {
     ArgumentMetadata,
     BadRequestException,
 } from '@nestjs/common';
+import { ERROR_CODE } from '../../common/constants';
 
 /**
  * Configuration options for ParseIntPipe
@@ -37,7 +38,7 @@ export class ParseIntPipe implements PipeTransform<string, number> {
         if (value === undefined || value === null) {
             throw new BadRequestException({
                 message: `${metadata.data || 'Value'} is required`,
-                error: 'MISSING_VALUE',
+                error: ERROR_CODE.MISSING_VALUE,
                 details: 'Integer value is required but was not provided.',
             });
         }
@@ -47,7 +48,7 @@ export class ParseIntPipe implements PipeTransform<string, number> {
         if (stringValue === '') {
             throw new BadRequestException({
                 message: `${metadata.data || 'Value'} cannot be empty`,
-                error: 'EMPTY_VALUE',
+                error: ERROR_CODE.EMPTY_VALUE,
                 details: 'Integer value cannot be an empty string.',
             });
         }
@@ -59,7 +60,7 @@ export class ParseIntPipe implements PipeTransform<string, number> {
                 message:
                     this.options.errorMessage ||
                     `${metadata.data || 'Value'} must be a valid integer`,
-                error: 'INVALID_INTEGER',
+                error: ERROR_CODE.INVALID_INTEGER,
                 details: `Provided value "${value}" is not a valid integer.`,
             });
         }
@@ -68,7 +69,7 @@ export class ParseIntPipe implements PipeTransform<string, number> {
         if (!this.options.allowNegative && parsedValue < 0) {
             throw new BadRequestException({
                 message: `${metadata.data || 'Value'} must be a positive integer`,
-                error: 'NEGATIVE_NOT_ALLOWED',
+                error: ERROR_CODE.NEGATIVE_NOT_ALLOWED,
                 details: 'Negative integers are not allowed for this field.',
             });
         }
@@ -77,7 +78,7 @@ export class ParseIntPipe implements PipeTransform<string, number> {
         if (this.options.min !== undefined && parsedValue < this.options.min) {
             throw new BadRequestException({
                 message: `${metadata.data || 'Value'} must be at least ${this.options.min}`,
-                error: 'VALUE_TOO_SMALL',
+                error: ERROR_CODE.VALUE_TOO_SMALL,
                 details: `Minimum allowed value is ${this.options.min}.`,
             });
         }
@@ -86,7 +87,7 @@ export class ParseIntPipe implements PipeTransform<string, number> {
         if (this.options.max !== undefined && parsedValue > this.options.max) {
             throw new BadRequestException({
                 message: `${metadata.data || 'Value'} must be at most ${this.options.max}`,
-                error: 'VALUE_TOO_LARGE',
+                error: ERROR_CODE.VALUE_TOO_LARGE,
                 details: `Maximum allowed value is ${this.options.max}.`,
             });
         }

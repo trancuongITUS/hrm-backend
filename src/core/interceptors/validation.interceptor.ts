@@ -11,6 +11,17 @@ import { map } from 'rxjs/operators';
 import { validate, ValidationError } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 import { Request } from 'express';
+import {
+    FILE_LIMITS,
+    VALIDATION,
+    METHODS_WITH_BODY,
+    ALLOWED_CONTENT_TYPES,
+    ERROR_CODE,
+    SENSITIVE_FIELDS,
+    REQUIRED_HEADERS,
+    REGEX_PATTERN,
+    CONTENT_TYPE,
+} from '../../common/constants';
 
 /**
  * Validation interceptor for request/response validation
@@ -58,13 +69,13 @@ export class ValidationInterceptor implements NestInterceptor {
     private validateRequestSize(request: Request): void {
         const contentLength = request.headers['content-length'];
         if (contentLength) {
-            const size = parseInt(contentLength, 10);
-            const maxSize = 10 * 1024 * 1024; // 10MB
+            const size = parseInt(contentLength, VALIDATION.DECIMAL_RADIX);
+            const maxSize = FILE_LIMITS.MAX_REQUEST_PAYLOAD;
 
             if (size > maxSize) {
                 throw new BadRequestException({
                     message: 'Request payload too large',
-                    error: 'PAYLOAD_TOO_LARGE',
+                    error: ERROR_CODE.PAYLOAD_TOO_LARGE,
                     maxSize: `${maxSize} bytes`,
                     receivedSize: `${size} bytes`,
                 });
@@ -77,22 +88,18 @@ export class ValidationInterceptor implements NestInterceptor {
      */
     private validateContentType(request: Request): void {
         const { method } = request;
-        const hasBody = ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase());
+        const hasBody = METHODS_WITH_BODY.includes(method.toUpperCase() as any);
 
         if (hasBody) {
             const contentType = request.headers['content-type'];
             if (!contentType) {
                 throw new BadRequestException({
                     message: 'Content-Type header is required',
-                    error: 'MISSING_CONTENT_TYPE',
+                    error: ERROR_CODE.MISSING_CONTENT_TYPE,
                 });
             }
 
-            const allowedTypes = [
-                'application/json',
-                'application/x-www-form-urlencoded',
-                'multipart/form-data',
-            ];
+            const allowedTypes = ALLOWED_CONTENT_TYPES;
 
             const isValidType = allowedTypes.some((type) =>
                 contentType.toLowerCase().includes(type),
@@ -101,7 +108,7 @@ export class ValidationInterceptor implements NestInterceptor {
             if (!isValidType) {
                 throw new BadRequestException({
                     message: 'Invalid Content-Type',
-                    error: 'INVALID_CONTENT_TYPE',
+                    error: ERROR_CODE.INVALID_CONTENT_TYPE,
                     allowedTypes,
                     receivedType: contentType,
                 });
@@ -113,7 +120,7 @@ export class ValidationInterceptor implements NestInterceptor {
      * Validates required headers
      */
     private validateRequiredHeaders(request: Request): void {
-        const requiredHeaders = ['user-agent'];
+        const requiredHeaders = REQUIRED_HEADERS;
 
         for (const header of requiredHeaders) {
             if (!request.headers[header]) {
@@ -134,23 +141,33 @@ export class ValidationInterceptor implements NestInterceptor {
 
         // Validate pagination parameters
         if (query.page) {
-            const page = parseInt(query.page as string, 10);
-            if (isNaN(page) || page < 1) {
+            const page = parseInt(
+                query.page as string,
+                VALIDATION.DECIMAL_RADIX,
+            );
+            if (isNaN(page) || page < VALIDATION.MIN_PAGE_NUMBER) {
                 throw new BadRequestException({
                     message: 'Invalid page parameter',
-                    error: 'INVALID_PAGE',
+                    error: ERROR_CODE.INVALID_PAGE,
                     details: 'Page must be a positive integer',
                 });
             }
         }
 
         if (query.limit) {
-            const limit = parseInt(query.limit as string, 10);
-            if (isNaN(limit) || limit < 1 || limit > 100) {
+            const limit = parseInt(
+                query.limit as string,
+                VALIDATION.DECIMAL_RADIX,
+            );
+            if (
+                isNaN(limit) ||
+                limit < VALIDATION.MIN_PAGINATION_LIMIT ||
+                limit > VALIDATION.MAX_PAGINATION_LIMIT
+            ) {
                 throw new BadRequestException({
                     message: 'Invalid limit parameter',
-                    error: 'INVALID_LIMIT',
-                    details: 'Limit must be between 1 and 100',
+                    error: ERROR_CODE.INVALID_LIMIT,
+                    details: `Limit must be between ${VALIDATION.MIN_PAGINATION_LIMIT} and ${VALIDATION.MAX_PAGINATION_LIMIT}`,
                 });
             }
         }
@@ -158,12 +175,12 @@ export class ValidationInterceptor implements NestInterceptor {
         // Validate sort parameters
         if (query.sort) {
             const sort = query.sort as string;
-            const validSortPattern = /^[a-zA-Z_][a-zA-Z0-9_]*(:asc|:desc)?$/;
+            const validSortPattern = REGEX_PATTERN.SORT_PARAMETER;
 
             if (!validSortPattern.test(sort)) {
                 throw new BadRequestException({
                     message: 'Invalid sort parameter format',
-                    error: 'INVALID_SORT_FORMAT',
+                    error: ERROR_CODE.INVALID_SORT_FORMAT,
                     details: 'Sort must be in format: field or field:asc/desc',
                     example: 'createdAt:desc',
                 });
@@ -173,19 +190,19 @@ export class ValidationInterceptor implements NestInterceptor {
         // Validate search parameters
         if (query.search) {
             const search = query.search as string;
-            if (search.length < 2) {
+            if (search.length < VALIDATION.MIN_SEARCH_LENGTH) {
                 throw new BadRequestException({
                     message: 'Search query too short',
-                    error: 'SEARCH_TOO_SHORT',
-                    details: 'Search query must be at least 2 characters long',
+                    error: ERROR_CODE.SEARCH_TOO_SHORT,
+                    details: `Search query must be at least ${VALIDATION.MIN_SEARCH_LENGTH} characters long`,
                 });
             }
 
-            if (search.length > 100) {
+            if (search.length > VALIDATION.MAX_SEARCH_LENGTH) {
                 throw new BadRequestException({
                     message: 'Search query too long',
-                    error: 'SEARCH_TOO_LONG',
-                    details: 'Search query must be less than 100 characters',
+                    error: ERROR_CODE.SEARCH_TOO_LONG,
+                    details: `Search query must be less than ${VALIDATION.MAX_SEARCH_LENGTH} characters`,
                 });
             }
         }
@@ -197,7 +214,7 @@ export class ValidationInterceptor implements NestInterceptor {
     private validateResponse(response: any, request: Request): void {
         // Skip validation for certain content types
         const contentType = request.headers['accept'];
-        if (contentType && !contentType.includes('application/json')) {
+        if (contentType && !contentType.includes(CONTENT_TYPE.JSON)) {
             return;
         }
 
@@ -242,15 +259,7 @@ export class ValidationInterceptor implements NestInterceptor {
             return;
         }
 
-        const sensitiveFields = [
-            'password',
-            'token',
-            'secret',
-            'apiKey',
-            'privateKey',
-            'ssn',
-            'creditCard',
-        ];
+        const sensitiveFields = SENSITIVE_FIELDS;
 
         const responseStr = JSON.stringify(response).toLowerCase();
 
@@ -283,7 +292,7 @@ export class ValidationInterceptor implements NestInterceptor {
             const formattedErrors = this.formatValidationErrors(errors);
             throw new BadRequestException({
                 message: 'Validation failed',
-                error: 'VALIDATION_ERROR',
+                error: ERROR_CODE.VALIDATION_ERROR,
                 details: formattedErrors,
             });
         }

@@ -8,8 +8,7 @@ import {
 } from '@nestjs/common';
 import { Observable, throwError, TimeoutError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
-
-export const TIMEOUT_MS = 'TIMEOUT_MS';
+import { TIMEOUT_MS, ERROR_CODE } from '../../common/constants';
 
 /**
  * Timeout interceptor that prevents requests from running indefinitely
@@ -28,7 +27,7 @@ export class TimeoutInterceptor implements NestInterceptor {
                         () =>
                             new RequestTimeoutException({
                                 message: `Request timed out after ${this.timeoutMs}ms`,
-                                error: 'REQUEST_TIMEOUT',
+                                error: ERROR_CODE.REQUEST_TIMEOUT,
                                 details: `The request exceeded the maximum allowed time of ${this.timeoutMs}ms`,
                             }),
                     );
