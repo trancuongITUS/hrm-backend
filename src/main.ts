@@ -2,11 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './core/filters/http-exception.filter';
-import { LoggingInterceptor } from './core/interceptors/logging.interceptor';
-import { TimeoutInterceptor } from './core/interceptors/timeout.interceptor';
-import { TransformInterceptor } from './core/interceptors/transform.interceptor';
-import { ValidationPipe as CustomValidationPipe } from './core/pipes/validation.pipe';
 import { AppLogger } from './common/utils/logger.util';
 
 async function bootstrap(): Promise<void> {
@@ -18,25 +13,14 @@ async function bootstrap(): Promise<void> {
     // Global prefix for all routes
     app.setGlobalPrefix('api/v1');
 
-    // Global pipes
+    // Additional validation pipe (custom pipe is already registered in AppModule)
     app.useGlobalPipes(
-        new CustomValidationPipe(), // Custom validation pipe with enhanced error handling
         new ValidationPipe({
             whitelist: true, // Strip non-whitelisted properties
             forbidNonWhitelisted: true, // Throw error for non-whitelisted properties
             transform: true, // Transform types automatically
             disableErrorMessages: process.env.NODE_ENV === 'production', // Hide detailed validation errors in production
         }),
-    );
-
-    // Global filters
-    app.useGlobalFilters(new HttpExceptionFilter());
-
-    // Global interceptors
-    app.useGlobalInterceptors(
-        new LoggingInterceptor(), // Request/response logging
-        new TimeoutInterceptor(30000), // 30-second timeout
-        new TransformInterceptor(), // Response transformation
     );
 
     // Global guards (Rate limiting is handled by ThrottlerModule automatically)

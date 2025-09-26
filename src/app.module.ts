@@ -17,6 +17,7 @@ import {
     MetricsInterceptor,
     ValidationInterceptor,
 } from './core/interceptors';
+import { TIMEOUT_MS } from './core/interceptors/timeout.interceptor';
 
 @Module({
     imports: [
@@ -42,6 +43,11 @@ import {
     controllers: [AppController],
     providers: [
         AppService,
+        // Timeout configuration
+        {
+            provide: TIMEOUT_MS,
+            useValue: 30000, // 30 seconds
+        },
         // Global pipes
         {
             provide: APP_PIPE,
@@ -98,6 +104,6 @@ export class AppModule implements NestModule {
                 RequestContextMiddleware, // Request context and ID generation
                 CompressionMiddleware, // Response compression
             )
-            .forRoutes('*'); // Apply to all routes
+            .forRoutes('/*path'); // Apply to all routes using correct path-to-regexp syntax
     }
 }

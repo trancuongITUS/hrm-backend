@@ -1,10 +1,10 @@
-import { Logger } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
 
 /**
  * Enhanced logger utility with structured logging capabilities
  * Provides consistent logging format across the application
  */
-export class AppLogger extends Logger {
+export class AppLogger extends ConsoleLogger {
     /**
      * Logs structured data with context
      */

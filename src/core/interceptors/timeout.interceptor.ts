@@ -4,9 +4,12 @@ import {
     ExecutionContext,
     CallHandler,
     RequestTimeoutException,
+    Inject,
 } from '@nestjs/common';
 import { Observable, throwError, TimeoutError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
+
+export const TIMEOUT_MS = 'TIMEOUT_MS';
 
 /**
  * Timeout interceptor that prevents requests from running indefinitely
@@ -14,7 +17,7 @@ import { catchError, timeout } from 'rxjs/operators';
  */
 @Injectable()
 export class TimeoutInterceptor implements NestInterceptor {
-    constructor(private readonly timeoutMs: number = 30000) {} // Default 30 seconds
+    constructor(@Inject(TIMEOUT_MS) private readonly timeoutMs: number) {}
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         return next.handle().pipe(
