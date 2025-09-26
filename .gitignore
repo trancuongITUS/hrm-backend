@@ -19,6 +19,7 @@ env.example
 .env.development
 .env.test
 .env.production
+.env.local.example
 
 # temp directory
 .temp
