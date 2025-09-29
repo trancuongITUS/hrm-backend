@@ -18,12 +18,16 @@ import {
     ValidationInterceptor,
 } from './core/interceptors';
 import { ConfigModule, ConfigService } from './config';
+import { PrismaModule } from './database';
 import { TIMEOUT_MS } from './common/constants';
 
 @Module({
     imports: [
         // Configuration module (global)
         ConfigModule,
+
+        // Database module (global)
+        PrismaModule,
 
         // Rate limiting configuration using ConfigService
         ThrottlerModule.forRootAsync({

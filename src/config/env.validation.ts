@@ -32,14 +32,20 @@ export interface EnvironmentVariables {
     REQUEST_TIMEOUT?: number;
     CACHE_TTL?: number;
 
-    // Database (optional - add when needed)
-    DATABASE_URL?: string;
+    // Database (required for Prisma)
+    DATABASE_URL: string;
     DATABASE_HOST?: string;
     DATABASE_PORT?: number;
     DATABASE_USERNAME?: string;
     DATABASE_PASSWORD?: string;
     DATABASE_NAME?: string;
     DATABASE_SSL?: boolean;
+
+    // Prisma-specific configuration
+    PRISMA_QUERY_ENGINE_LIBRARY?: string;
+    PRISMA_QUERY_ENGINE_BINARY?: string;
+    DATABASE_CONNECTION_LIMIT?: number;
+    DATABASE_POOL_TIMEOUT?: number;
 
     // JWT (optional - add when needed)
     JWT_SECRET?: string;
@@ -147,12 +153,13 @@ export const validationSchema = Joi.object<EnvironmentVariables>({
         .default(300000)
         .description('Cache TTL in milliseconds'),
 
-    // Database - Optional
+    // Database - Required for Prisma
     DATABASE_URL: Joi.string()
         .uri()
-        .optional()
-        .description('Database connection URL'),
+        .required()
+        .description('Prisma database connection URL (required)'),
 
+    // Optional individual database connection parameters (for non-Prisma usage)
     DATABASE_HOST: Joi.string()
         .hostname()
         .optional()
@@ -169,6 +176,25 @@ export const validationSchema = Joi.object<EnvironmentVariables>({
     DATABASE_SSL: Joi.boolean()
         .default(false)
         .description('Enable database SSL connection'),
+
+    // Prisma-specific configuration
+    PRISMA_QUERY_ENGINE_LIBRARY: Joi.string()
+        .optional()
+        .description('Prisma query engine library path'),
+
+    PRISMA_QUERY_ENGINE_BINARY: Joi.string()
+        .optional()
+        .description('Prisma query engine binary path'),
+
+    DATABASE_CONNECTION_LIMIT: Joi.number()
+        .positive()
+        .default(10)
+        .description('Maximum database connection pool size'),
+
+    DATABASE_POOL_TIMEOUT: Joi.number()
+        .positive()
+        .default(20000)
+        .description('Database connection pool timeout in milliseconds'),
 
     // JWT - Optional
     JWT_SECRET: Joi.string()

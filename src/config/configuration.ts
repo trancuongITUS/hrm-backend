@@ -51,13 +51,17 @@ export interface PerformanceConfig {
 }
 
 export interface DatabaseConfig {
-    url?: string;
+    url: string;
     host?: string;
     port?: number;
     username?: string;
     password?: string;
     name?: string;
     ssl: boolean;
+    connectionLimit: number;
+    poolTimeout: number;
+    prismaQueryEngineLibrary?: string;
+    prismaQueryEngineBinary?: string;
 }
 
 export interface JwtConfig {
@@ -164,6 +168,10 @@ export default (): Configuration => {
             password: env.DATABASE_PASSWORD,
             name: env.DATABASE_NAME,
             ssl: env.DATABASE_SSL!,
+            connectionLimit: env.DATABASE_CONNECTION_LIMIT!,
+            poolTimeout: env.DATABASE_POOL_TIMEOUT!,
+            prismaQueryEngineLibrary: env.PRISMA_QUERY_ENGINE_LIBRARY,
+            prismaQueryEngineBinary: env.PRISMA_QUERY_ENGINE_BINARY,
         },
 
         jwt: {
