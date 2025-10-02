@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppLogger } from './common/utils/logger.util';
 import { ConfigService } from './config';
@@ -33,6 +34,49 @@ async function bootstrap(): Promise<void> {
 
     // Enable shutdown hooks
     app.enableShutdownHooks();
+
+    // Swagger Configuration
+    const config = new DocumentBuilder()
+        .setTitle('HRM Backend API')
+        .setDescription(
+            'Human Resource Management System Backend API Documentation. ' +
+                'This API provides comprehensive endpoints for managing employees, authentication, and HR operations.',
+        )
+        .setVersion('1.0.0')
+        .addTag('auth', 'Authentication endpoints')
+        .addTag('app', 'Application health and utility endpoints')
+        .addTag('examples', 'Example endpoints for testing authentication')
+        .addBearerAuth(
+            {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT',
+                name: 'JWT',
+                description: 'Enter JWT token',
+                in: 'header',
+            },
+            'JWT-auth', // This name here is important for matching up with @ApiBearerAuth() in your controller!
+        )
+        .addServer(
+            `http://localhost:${configService.app.port}`,
+            'Development server',
+        )
+        .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup(`${configService.app.apiPrefix}/docs`, app, document, {
+        swaggerOptions: {
+            persistAuthorization: true,
+            tagsSorter: 'alpha',
+            operationsSorter: 'alpha',
+        },
+        customSiteTitle: 'HRM Backend API Documentation',
+        customfavIcon: '/favicon.ico',
+        customCss: `
+            .swagger-ui .topbar { display: none }
+            .swagger-ui .info .title { color: #3b82f6 }
+        `,
+    });
 
     // CORS configuration (handled by CorsMiddleware in AppModule)
     // Security headers (handled by SecurityMiddleware in AppModule)
@@ -68,6 +112,9 @@ async function bootstrap(): Promise<void> {
     const logger = new AppLogger('Bootstrap');
     logger.log(
         `🚀 Application is running on: http://localhost:${port}/${configService.app.apiPrefix}`,
+    );
+    logger.log(
+        `📚 Swagger documentation available at: http://localhost:${port}/${configService.app.apiPrefix}/docs`,
     );
     logger.log(`📝 Environment: ${configService.app.environment}`);
     logger.log(`🛡️  Security middlewares enabled`);
