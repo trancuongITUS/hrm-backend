@@ -5,6 +5,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { AUTH } from '../src/common/constants/security.constants';
 
 const prisma = new PrismaClient();
 
@@ -13,8 +14,11 @@ async function main() {
 
     // Create admin user
     console.log('👤 Creating admin user...');
-    const hashedAdminPassword = await bcrypt.hash('admin123', 10);
-    
+    const hashedAdminPassword = await bcrypt.hash(
+        'admin123',
+        AUTH.BCRYPT_SALT_ROUNDS,
+    );
+
     const adminUser = await prisma.user.upsert({
         where: { email: 'admin@example.com' },
         update: {},
@@ -59,8 +63,11 @@ async function main() {
 
     const createdUsers: Array<{ id: string; email: string }> = [];
     for (const userData of sampleUsers) {
-        const hashedPassword = await bcrypt.hash('password123', 10);
-        
+        const hashedPassword = await bcrypt.hash(
+            'password123',
+            AUTH.BCRYPT_SALT_ROUNDS,
+        );
+
         const user = await prisma.user.upsert({
             where: { email: userData.email },
             update: {},
@@ -74,7 +81,7 @@ async function main() {
                 role: userData.role,
             },
         });
-        
+
         createdUsers.push({ id: user.id, email: user.email });
     }
 
@@ -102,7 +109,9 @@ async function main() {
     console.log('   Email: admin@example.com');
     console.log('   Password: admin123');
     console.log('\n   Regular Users:');
-    console.log('   Email: john.doe@example.com, jane.smith@example.com, bob.wilson@example.com');
+    console.log(
+        '   Email: john.doe@example.com, jane.smith@example.com, bob.wilson@example.com',
+    );
     console.log('   Password: password123');
 }
 

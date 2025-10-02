@@ -5,13 +5,15 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
-import { UserRepository } from '../../database/repositories/user.repository';
 import type { User } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { PasswordValidationService } from '../services/password-validation.service';
+import { AUTH_ERROR_MESSAGES } from '../../common/constants/security.constants';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
-    constructor(private readonly userRepository: UserRepository) {
+    constructor(
+        private readonly passwordValidationService: PasswordValidationService,
+    ) {
         super({
             usernameField: 'email', // Use email instead of username
             passwordField: 'password',
@@ -25,19 +27,17 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
         email: string,
         password: string,
     ): Promise<Omit<User, 'password'>> {
-        const user = await this.userRepository.findByEmail(email);
+        const user = await this.passwordValidationService.validateCredentials(
+            email,
+            password,
+        );
 
-        if (!user || !user.isActive) {
-            throw new UnauthorizedException('Invalid credentials');
+        if (!user) {
+            throw new UnauthorizedException(
+                AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS,
+            );
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password: _, ...userWithoutPassword } = user;
-        return userWithoutPassword;
+        return user;
     }
 }

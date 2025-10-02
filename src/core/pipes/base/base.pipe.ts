@@ -1,6 +1,7 @@
 import { PipeTransform, Injectable } from '@nestjs/common';
 import { isNullOrUndefined, isString } from '../../../common/utils/type.util';
 import { mergeOptions } from '../../../common/utils/object.util';
+import { safeStringConversion } from '../utils/pipe.utils';
 
 /**
  * Base options that all pipes can extend
@@ -126,11 +127,6 @@ export abstract class BaseStringPipe<
     protected convertToString(
         value: unknown,
     ): string | object | null | undefined {
-        if (typeof value === 'number' || typeof value === 'boolean') {
-            return String(value);
-        }
-
-        // Return objects as-is to avoid [object Object]
-        return value as string | object | null | undefined;
+        return safeStringConversion(value);
     }
 }

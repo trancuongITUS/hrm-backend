@@ -13,3 +13,6 @@ export * from './object.util';
 
 // Logger utilities (existing)
 export * from './logger.util';
+
+// Security utilities
+export * from './security.util';

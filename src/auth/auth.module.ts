@@ -12,6 +12,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { PasswordValidationService } from './services/password-validation.service';
 import { UserRepository } from '../database/repositories/user.repository';
 import { UserSessionRepository } from '../database/repositories/user-session.repository';
 import { PrismaModule } from '../database/prisma.module';
@@ -37,6 +38,7 @@ import { PrismaModule } from '../database/prisma.module';
     controllers: [AuthController],
     providers: [
         AuthService,
+        PasswordValidationService,
         JwtStrategy,
         JwtRefreshStrategy,
         LocalStrategy,

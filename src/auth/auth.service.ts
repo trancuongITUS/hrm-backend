@@ -12,7 +12,6 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import type { User } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 import { UserRepository } from '../database/repositories/user.repository';
 import { UserSessionRepository } from '../database/repositories/user-session.repository';
 import {
@@ -22,6 +21,13 @@ import {
     RefreshTokenPayload,
 } from './interfaces/auth.interface';
 import { RegisterDto, LoginDto } from './dto';
+import { PasswordValidationService } from './services/password-validation.service';
+import {
+    hashPassword,
+    comparePassword,
+    getRefreshTokenExpiry,
+} from '../common/utils/security.util';
+import { AUTH_ERROR_MESSAGES } from '../common/constants/security.constants';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +36,7 @@ export class AuthService {
         private readonly configService: ConfigService,
         private readonly userRepository: UserRepository,
         private readonly userSessionRepository: UserSessionRepository,
+        private readonly passwordValidationService: PasswordValidationService,
     ) {}
 
     /**
@@ -39,20 +46,10 @@ export class AuthService {
         email: string,
         password: string,
     ): Promise<Omit<User, 'password'> | null> {
-        const user = await this.userRepository.findByEmail(email);
-
-        if (!user || !user.isActive) {
-            return null;
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return null;
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password: _, ...userWithoutPassword } = user;
-        return userWithoutPassword;
+        return this.passwordValidationService.validateCredentials(
+            email,
+            password,
+        );
     }
 
     /**
@@ -64,22 +61,18 @@ export class AuthService {
             registerDto.email,
         );
         if (existingUserByEmail) {
-            throw new ConflictException('User with this email already exists');
+            throw new ConflictException(AUTH_ERROR_MESSAGES.EMAIL_EXISTS);
         }
 
         const existingUserByUsername = await this.userRepository.findByUsername(
             registerDto.username,
         );
         if (existingUserByUsername) {
-            throw new ConflictException('Username is already taken');
+            throw new ConflictException(AUTH_ERROR_MESSAGES.USERNAME_TAKEN);
         }
 
         // Hash password
-        const saltRounds = 12;
-        const hashedPassword = await bcrypt.hash(
-            registerDto.password,
-            saltRounds,
-        );
+        const hashedPassword = await hashPassword(registerDto.password);
 
         // Create user
         const user = await this.userRepository.create({
@@ -92,9 +85,7 @@ export class AuthService {
 
         // Generate tokens and create session
         const tokens = await this.generateTokens(user);
-        const refreshTokenExpiry = new Date(
-            Date.now() + 7 * 24 * 60 * 60 * 1000,
-        ); // 7 days
+        const refreshTokenExpiry = getRefreshTokenExpiry();
 
         await this.userSessionRepository.createSession(
             user.id,
@@ -129,14 +120,14 @@ export class AuthService {
     async login(loginDto: LoginDto): Promise<LoginResponse> {
         const user = await this.validateUser(loginDto.email, loginDto.password);
         if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new UnauthorizedException(
+                AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS,
+            );
         }
 
         // Generate tokens and create session
         const tokens = await this.generateTokens(user);
-        const refreshTokenExpiry = new Date(
-            Date.now() + 7 * 24 * 60 * 60 * 1000,
-        ); // 7 days
+        const refreshTokenExpiry = getRefreshTokenExpiry();
 
         await this.userSessionRepository.createSession(
             user.id,
@@ -182,7 +173,9 @@ export class AuthService {
                 );
 
             if (!session || !session.user.isActive) {
-                throw new UnauthorizedException('Invalid refresh token');
+                throw new UnauthorizedException(
+                    AUTH_ERROR_MESSAGES.INVALID_REFRESH_TOKEN,
+                );
             }
 
             // Check if session is valid
@@ -190,7 +183,7 @@ export class AuthService {
                 await this.userSessionRepository.isSessionValid(refreshToken);
             if (!isValid) {
                 throw new UnauthorizedException(
-                    'Refresh token expired or revoked',
+                    AUTH_ERROR_MESSAGES.REFRESH_TOKEN_EXPIRED,
                 );
             }
 
@@ -199,9 +192,7 @@ export class AuthService {
 
             // Update session with new refresh token
             await this.userSessionRepository.revokeSession(refreshToken);
-            const newRefreshTokenExpiry = new Date(
-                Date.now() + 7 * 24 * 60 * 60 * 1000,
-            );
+            const newRefreshTokenExpiry = getRefreshTokenExpiry();
             await this.userSessionRepository.createSession(
                 session.user.id,
                 tokens.refreshToken,
@@ -210,7 +201,9 @@ export class AuthService {
 
             return tokens;
         } catch {
-            throw new UnauthorizedException('Invalid refresh token');
+            throw new UnauthorizedException(
+                AUTH_ERROR_MESSAGES.INVALID_REFRESH_TOKEN,
+            );
         }
     }
 
@@ -283,21 +276,22 @@ export class AuthService {
     ): Promise<void> {
         const user = await this.userRepository.findUnique({ id: userId });
         if (!user) {
-            throw new BadRequestException('User not found');
+            throw new BadRequestException(AUTH_ERROR_MESSAGES.USER_NOT_FOUND);
         }
 
         // Verify current password
-        const isCurrentPasswordValid = await bcrypt.compare(
+        const isCurrentPasswordValid = await comparePassword(
             currentPassword,
             user.password,
         );
         if (!isCurrentPasswordValid) {
-            throw new UnauthorizedException('Current password is incorrect');
+            throw new UnauthorizedException(
+                AUTH_ERROR_MESSAGES.INCORRECT_PASSWORD,
+            );
         }
 
         // Hash new password
-        const saltRounds = 12;
-        const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+        const hashedNewPassword = await hashPassword(newPassword);
 
         // Update password and set password changed timestamp
         await this.userRepository.update(
@@ -318,11 +312,11 @@ export class AuthService {
     async getProfile(userId: string): Promise<Omit<User, 'password'>> {
         const user = await this.userRepository.findUnique({ id: userId });
         if (!user) {
-            throw new BadRequestException('User not found');
+            throw new BadRequestException(AUTH_ERROR_MESSAGES.USER_NOT_FOUND);
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password, ...userProfile } = user;
+        const { password: _, ...userProfile } = user;
         return userProfile;
     }
 }

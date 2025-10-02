@@ -94,3 +94,44 @@ export const SECURITY_HEADER_VALUES = {
 // =============================================================================
 
 export const SAFE_HTTP_METHODS = ['GET', 'HEAD', 'OPTIONS'] as const;
+
+// =============================================================================
+// AUTHENTICATION & PASSWORD SECURITY
+// =============================================================================
+
+export const AUTH = {
+    // Password hashing
+    BCRYPT_SALT_ROUNDS: 12,
+
+    // Token expiry times (in milliseconds)
+    REFRESH_TOKEN_EXPIRY_MS: 7 * 24 * 60 * 60 * 1000, // 7 days
+    REFRESH_TOKEN_EXPIRY_DAYS: 7,
+
+    // Session configuration
+    MAX_LOGIN_ATTEMPTS: 5,
+    LOCKOUT_DURATION_MS: 15 * 60 * 1000, // 15 minutes
+} as const;
+
+// =============================================================================
+// AUTHENTICATION ERROR MESSAGES
+// =============================================================================
+
+export const AUTH_ERROR_MESSAGES = {
+    // User existence errors
+    EMAIL_EXISTS: 'User with this email already exists',
+    USERNAME_TAKEN: 'Username is already taken',
+    USER_NOT_FOUND: 'User not found',
+
+    // Credential errors
+    INVALID_CREDENTIALS: 'Invalid credentials',
+    INCORRECT_PASSWORD: 'Current password is incorrect',
+
+    // Token errors
+    INVALID_REFRESH_TOKEN: 'Invalid refresh token',
+    REFRESH_TOKEN_EXPIRED: 'Refresh token expired or revoked',
+
+    // Account status errors
+    ACCOUNT_INACTIVE: 'Account is inactive',
+    ACCOUNT_LOCKED:
+        'Account is temporarily locked due to too many failed login attempts',
+} as const;
