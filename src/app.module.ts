@@ -19,6 +19,9 @@ import {
 } from './core/interceptors';
 import { ConfigModule, ConfigService } from './config';
 import { PrismaModule } from './database';
+import { AuthModule } from './auth/auth.module';
+import { GlobalJwtAuthGuard } from './auth/guards/global-jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 import { TIMEOUT_MS } from './common/constants';
 
 @Module({
@@ -28,6 +31,9 @@ import { TIMEOUT_MS } from './common/constants';
 
         // Database module (global)
         PrismaModule,
+
+        // Authentication module
+        AuthModule,
 
         // Rate limiting configuration using ConfigService
         ThrottlerModule.forRootAsync({
@@ -96,7 +102,15 @@ import { TIMEOUT_MS } from './common/constants';
             provide: APP_INTERCEPTOR,
             useClass: TimeoutInterceptor,
         },
-        // Global guards
+        // Global guards (order matters - authentication before authorization)
+        {
+            provide: APP_GUARD,
+            useClass: GlobalJwtAuthGuard,
+        },
+        {
+            provide: APP_GUARD,
+            useClass: RolesGuard,
+        },
         {
             provide: APP_GUARD,
             useClass: ThrottlerGuard,

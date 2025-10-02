@@ -65,8 +65,8 @@ export interface DatabaseConfig {
 }
 
 export interface JwtConfig {
-    secret?: string;
-    expiresIn: string;
+    accessSecret?: string;
+    accessExpiresIn: string;
     refreshSecret?: string;
     refreshExpiresIn: string;
 }
@@ -175,8 +175,8 @@ export default (): Configuration => {
         },
 
         jwt: {
-            secret: env.JWT_SECRET,
-            expiresIn: env.JWT_EXPIRES_IN!,
+            accessSecret: env.JWT_ACCESS_SECRET,
+            accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN!,
             refreshSecret: env.JWT_REFRESH_SECRET,
             refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN!,
         },

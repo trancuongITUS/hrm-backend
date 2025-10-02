@@ -48,8 +48,8 @@ export interface EnvironmentVariables {
     DATABASE_POOL_TIMEOUT?: number;
 
     // JWT (optional - add when needed)
-    JWT_SECRET?: string;
-    JWT_EXPIRES_IN?: string;
+    JWT_ACCESS_SECRET?: string;
+    JWT_ACCESS_EXPIRES_IN?: string;
     JWT_REFRESH_SECRET?: string;
     JWT_REFRESH_EXPIRES_IN?: string;
 
@@ -197,15 +197,15 @@ export const validationSchema = Joi.object<EnvironmentVariables>({
         .description('Database connection pool timeout in milliseconds'),
 
     // JWT - Optional
-    JWT_SECRET: Joi.string()
+    JWT_ACCESS_SECRET: Joi.string()
         .min(32)
         .optional()
-        .description('JWT secret key (minimum 32 characters)'),
+        .description('JWT access token secret key (minimum 32 characters)'),
 
-    JWT_EXPIRES_IN: Joi.string()
+    JWT_ACCESS_EXPIRES_IN: Joi.string()
         .pattern(/^\d+[smhdwy]$/)
-        .default('1h')
-        .description('JWT expiration time'),
+        .default('15m')
+        .description('JWT access token expiration time'),
 
     JWT_REFRESH_SECRET: Joi.string()
         .min(32)
